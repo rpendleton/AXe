@@ -33,8 +33,7 @@ struct Touch: AsyncParsableCommand {
     @Option(name: .customLong("delay"), help: "Delay between touch down and up events in seconds (if both are specified).")
     var delay: Double?
     
-    @Option(name: .customLong("udid"), help: "The UDID of the simulator.")
-    var simulatorUDID: String
+    @OptionGroup var simulatorTarget: SimulatorTarget
 
 
     func validate() throws {
@@ -74,7 +73,7 @@ struct Touch: AsyncParsableCommand {
 
         let physicalPoint = try await OrientationAwareCoordinates.translate(
             point: (x: pointX, y: pointY),
-            for: simulatorUDID,
+            for: simulatorTarget,
             logger: logger
         )
 
@@ -102,7 +101,7 @@ struct Touch: AsyncParsableCommand {
             primitives.append(.touch(.up, x: physicalPoint.x, y: physicalPoint.y))
         }
 
-        try HIDBroker.sendTouchPrimitives(primitives, simulatorUDID: simulatorUDID)
+        try HIDBroker.sendTouchPrimitives(primitives, simulatorTarget: simulatorTarget)
         
         logger.info().log("Touch events completed successfully")
     }

@@ -30,8 +30,7 @@ struct Key: AsyncParsableCommand {
     @Option(name: .customLong("duration"), help: "Duration to hold the key in seconds (optional).")
     var duration: Double?
     
-    @Option(name: .customLong("udid"), help: "The UDID of the simulator.")
-    var simulatorUDID: String
+    @OptionGroup var simulatorTarget: SimulatorTarget
 
     func validate() throws {
         // Validate keycode range
@@ -84,7 +83,7 @@ struct Key: AsyncParsableCommand {
         try await HIDInteractor
             .performHIDEvent(
                 keyEvent,
-                for: simulatorUDID,
+                for: simulatorTarget,
                 logger: logger
             )
         

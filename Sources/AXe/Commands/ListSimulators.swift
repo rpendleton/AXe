@@ -8,13 +8,16 @@ struct ListSimulators: AsyncParsableCommand {
         abstract: "Lists all available simulators."
     )
 
+    @Option(name: .customLong("device-set"), help: "A simulator device set other than the default.")
+    var deviceSetPath: String?
+
     func run() async throws {
         let logger = AxeLogger()
         
         try await performGlobalSetup(logger: logger)
 
         let simulatorSet = try await getSimulatorSet(
-            deviceSetPath: nil,
+            deviceSetPath: deviceSetPath,
             logger: logger,
             reporter: EmptyEventReporter.shared
         )

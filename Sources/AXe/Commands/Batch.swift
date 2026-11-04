@@ -21,8 +21,7 @@ struct Batch: AsyncParsableCommand {
         """
     )
 
-    @Option(name: .customLong("udid"), help: "The UDID of the simulator.")
-    var simulatorUDID: String
+    @OptionGroup var simulatorTarget: SimulatorTarget
 
     @Option(name: .customLong("step"), help: "Step to execute. Repeat for multiple steps.")
     var steps: [String] = []
@@ -90,7 +89,7 @@ struct Batch: AsyncParsableCommand {
 
         let context = await MainActor.run {
             BatchContext(
-                simulatorUDID: simulatorUDID,
+                simulatorTarget: simulatorTarget,
                 axCachePolicy: axCachePolicy,
                 typeSubmissionMode: typeSubmissionMode,
                 typeChunkSize: typeChunkSize,
@@ -100,7 +99,7 @@ struct Batch: AsyncParsableCommand {
             )
         }
 
-        let session = try await HIDInteractor.makeSession(for: simulatorUDID, logger: logger)
+        let session = try await HIDInteractor.makeSession(for: simulatorTarget, logger: logger)
         let runner = BatchPlanRunner(session: session, logger: logger)
 
         var failures: [String] = []
@@ -112,7 +111,7 @@ struct Batch: AsyncParsableCommand {
                 stepName = tokens.first ?? "<empty>"
                 let primitives = try await BatchStepParser.parseStepTokens(
                     tokens,
-                    globalUDID: simulatorUDID,
+                    globalUDID: simulatorTarget.udid,
                     context: context,
                     logger: logger
                 )

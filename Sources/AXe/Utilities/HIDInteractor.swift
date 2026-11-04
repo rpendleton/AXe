@@ -12,7 +12,7 @@ import FBSimulatorControl
 struct HIDInteractor {
 
     struct Session {
-        let simulatorUDID: String
+        let simulatorTarget: SimulatorTarget
         let simulator: FBSimulator
         let hid: FBSimulatorHID
     }
@@ -29,7 +29,7 @@ struct HIDInteractor {
         return 25
     }
 
-    static func makeSession(for simulatorUDID: String, logger: AxeLogger) async throws -> Session {
+    static func makeSession(for simulatorTarget: SimulatorTarget, logger: AxeLogger) async throws -> Session {
         logger.info().log("Loading private frameworks for HID operations...")
         let frameworkLoader = FBSimulatorControlFrameworkLoader.xcodeFrameworks
         do {
@@ -42,11 +42,11 @@ struct HIDInteractor {
             )
         }
 
-        let simulatorSet = try await getSimulatorSet(deviceSetPath: nil, logger: logger, reporter: EmptyEventReporter.shared)
+        let simulatorSet = try await getSimulatorSet(deviceSetPath: simulatorTarget.deviceSetPath, logger: logger, reporter: EmptyEventReporter.shared)
         logger.info().log("FBSimulatorSet obtained.")
 
-        guard let simulator = simulatorSet.allSimulators.first(where: { $0.udid == simulatorUDID }) else {
-            throw CLIError.simulatorNotFound(udid: simulatorUDID)
+        guard let simulator = simulatorSet.allSimulators.first(where: { $0.udid == simulatorTarget.udid }) else {
+            throw CLIError.simulatorNotFound(udid: simulatorTarget.udid)
         }
 
         logger.info().log("Target (FBSimulator) obtained: \(simulator.udid)")
@@ -55,12 +55,12 @@ struct HIDInteractor {
         guard simulator.state == .booted else {
             let stateDescription = FBiOSTargetStateStringFromState(simulator.state)
             throw CLIError(
-                errorDescription: "Simulator \(simulatorUDID) is not booted. Current state: \(stateDescription)."
+                errorDescription: "Simulator \(simulatorTarget.udid) is not booted. Current state: \(stateDescription)."
             )
         }
         logger.info().log("Simulator state verified: booted")
 
-        let bootIdentity = try HIDBroker.currentBootIdentity(simulatorUDID: simulatorUDID)
+        let bootIdentity = try HIDBroker.currentBootIdentity(simulatorUDID: simulatorTarget.udid)
         let dtuhidProcessIdentifier = FBProcessFetcher().subprocess(
             of: bootIdentity.processIdentifier,
             withName: "dtuhidd"
@@ -75,14 +75,14 @@ struct HIDInteractor {
             sleep: { delay in try await Task.sleep(for: .seconds(delay)) }
         )
         let hid = try await getOrCreateHIDConnection(for: simulator, logger: logger)
-        let connectedBootIdentity = try HIDBroker.currentBootIdentity(simulatorUDID: simulatorUDID)
+        let connectedBootIdentity = try HIDBroker.currentBootIdentity(simulatorUDID: simulatorTarget.udid)
         guard HIDBroker.shouldReuseSession(
             sessionBootIdentity: bootIdentity,
             currentBootIdentity: connectedBootIdentity
         ) else {
-            hidConnections.removeValue(forKey: simulatorUDID)
+            hidConnections.removeValue(forKey: simulatorTarget.udid)
             throw CLIError(
-                errorDescription: "Simulator \(simulatorUDID) restarted while AXe was connecting. Try the command again."
+                errorDescription: "Simulator \(simulatorTarget.udid) restarted while AXe was connecting. Try the command again."
             )
         }
         try await HIDBroker.waitForHIDReadiness(
@@ -91,7 +91,7 @@ struct HIDInteractor {
             now: Date.init,
             sleep: { delay in try await Task.sleep(for: .seconds(delay)) }
         )
-        return Session(simulatorUDID: simulatorUDID, simulator: simulator, hid: hid)
+        return Session(simulatorTarget: simulatorTarget, simulator: simulator, hid: hid)
     }
 
     static func performHIDEvent(_ event: FBSimulatorHIDEvent, in session: Session, logger: AxeLogger) async throws {
@@ -105,8 +105,8 @@ struct HIDInteractor {
         }
     }
 
-    static func performHIDEvent(_ event: FBSimulatorHIDEvent, for simulatorUDID: String, logger: AxeLogger) async throws {
-        let session = try await makeSession(for: simulatorUDID, logger: logger)
+    static func performHIDEvent(_ event: FBSimulatorHIDEvent, for simulatorTarget: SimulatorTarget, logger: AxeLogger) async throws {
+        let session = try await makeSession(for: simulatorTarget, logger: logger)
         try await performHIDEvent(event, in: session, logger: logger)
     }
 
@@ -171,7 +171,7 @@ struct HIDInteractor {
         steps: Int,
         initialHold: TimeInterval,
         finalHold: TimeInterval,
-        for simulatorUDID: String,
+        for simulatorTarget: SimulatorTarget,
         logger: AxeLogger
     ) async throws {
         let event = try makeCompositeDragEvent(
@@ -182,17 +182,17 @@ struct HIDInteractor {
             initialHold: initialHold,
             finalHold: finalHold
         )
-        try await performHIDEvent(event, for: simulatorUDID, logger: logger)
+        try await performHIDEvent(event, for: simulatorTarget, logger: logger)
     }
 
     static func performPhysicalTap(
         at point: (x: Double, y: Double),
         preDelay: Double?,
         postDelay: Double?,
-        for simulatorUDID: String,
+        for simulatorTarget: SimulatorTarget,
         logger: AxeLogger
     ) async throws {
-        let session = try await makeSession(for: simulatorUDID, logger: logger)
+        let session = try await makeSession(for: simulatorTarget, logger: logger)
         try await performPhysicalTap(at: point, preDelay: preDelay, postDelay: postDelay, in: session, logger: logger)
     }
 

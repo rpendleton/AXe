@@ -118,8 +118,7 @@ struct Gesture: AsyncParsableCommand {
     @Option(name: .customLong("post-delay"), help: "Delay after completing the gesture in seconds.")
     var postDelay: Double?
     
-    @Option(name: .customLong("udid"), help: "The UDID of the simulator.")
-    var simulatorUDID: String
+    @OptionGroup var simulatorTarget: SimulatorTarget
 
     func validate() throws {
         // Validate screen dimensions if provided
@@ -217,7 +216,7 @@ struct Gesture: AsyncParsableCommand {
         try await HIDInteractor
             .performHIDEvent(
                 finalEvent,
-                for: simulatorUDID,
+                for: simulatorTarget,
                 logger: logger
             )
         

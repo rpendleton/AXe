@@ -14,7 +14,7 @@ enum TypeSubmissionMode: String, CaseIterable, ExpressibleByArgument {
 
 @MainActor
 final class BatchContext {
-    let simulatorUDID: String
+    let simulatorTarget: SimulatorTarget
     let axCachePolicy: AXCachePolicy
     let typeSubmissionMode: TypeSubmissionMode
     let typeChunkSize: Int
@@ -25,7 +25,7 @@ final class BatchContext {
     private var cachedRoots: [AccessibilityElement]?
 
     init(
-        simulatorUDID: String,
+        simulatorTarget: SimulatorTarget,
         axCachePolicy: AXCachePolicy,
         typeSubmissionMode: TypeSubmissionMode,
         typeChunkSize: Int,
@@ -33,7 +33,7 @@ final class BatchContext {
         waitTimeout: TimeInterval = 0,
         pollInterval: TimeInterval = 0.25
     ) {
-        self.simulatorUDID = simulatorUDID
+        self.simulatorTarget = simulatorTarget
         self.axCachePolicy = axCachePolicy
         self.typeSubmissionMode = typeSubmissionMode
         self.typeChunkSize = typeChunkSize
@@ -45,14 +45,14 @@ final class BatchContext {
     func accessibilityRoots(logger: AxeLogger, forceRefresh: Bool = false) async throws -> [AccessibilityElement] {
         switch axCachePolicy {
         case .none:
-            return try await AccessibilityFetcher.fetchAccessibilityElements(for: simulatorUDID, logger: logger)
+            return try await AccessibilityFetcher.fetchAccessibilityElements(for: simulatorTarget, logger: logger)
         case .perStep:
-            return try await AccessibilityFetcher.fetchAccessibilityElements(for: simulatorUDID, logger: logger)
+            return try await AccessibilityFetcher.fetchAccessibilityElements(for: simulatorTarget, logger: logger)
         case .perBatch:
             if !forceRefresh, let cachedRoots {
                 return cachedRoots
             }
-            let roots = try await AccessibilityFetcher.fetchAccessibilityElements(for: simulatorUDID, logger: logger)
+            let roots = try await AccessibilityFetcher.fetchAccessibilityElements(for: simulatorTarget, logger: logger)
             cachedRoots = roots
             return roots
         }

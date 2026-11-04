@@ -288,7 +288,7 @@ struct AccessibilityFetcherTests {
         )
 
         try await AccessibilityFetcher.recoverTestManagerDaemon(
-            simulatorUDID: "TEST-UDID",
+            simulatorTarget: SimulatorTarget(udid: "TEST-UDID"),
             dependencies: dependencies
         )
 
@@ -377,7 +377,7 @@ struct AccessibilityFetcherTests {
         )
 
         let result = try await AccessibilityFetcher.retryingAfterTestManagerRecovery(
-            simulatorUDID: "TEST-UDID",
+            simulatorTarget: SimulatorTarget(udid: "TEST-UDID"),
             logger: AxeLogger(),
             dependencies: dependencies
         ) {
@@ -412,7 +412,7 @@ struct AccessibilityFetcherTests {
 
         do {
             _ = try await AccessibilityFetcher.retryingAfterTestManagerRecovery(
-                simulatorUDID: "TEST-UDID",
+                simulatorTarget: SimulatorTarget(udid: "TEST-UDID"),
                 logger: AxeLogger(),
                 dependencies: dependencies
             ) {
@@ -446,7 +446,7 @@ struct AccessibilityFetcherTests {
 
         do {
             _ = try await AccessibilityFetcher.retryingAfterTestManagerRecovery(
-                simulatorUDID: "TEST-UDID",
+                simulatorTarget: SimulatorTarget(udid: "TEST-UDID"),
                 logger: AxeLogger(),
                 dependencies: dependencies
             ) {

@@ -112,25 +112,25 @@ struct OrientationAwareCoordinates {
     ///    - Screenshot landscape-shaped (wider than tall) → rotated device case.
     ///
     /// - Parameters:
-    ///   - simulatorUDID: Target simulator UDID.
+    ///   - simulatorTarget: Target simulator.
     ///   - orientationOverride: Forces a specific rotated-device `SimulatorOrientation`.
     ///     Intended for internal tests or future explicit callers; normal CLI commands
     ///     rely on automatic private orientation detection.
     ///   - logger: AXe logger instance.
     /// - Returns: The `CoordinateMapping` that applies to the current simulator state.
     static func detectMapping(
-        for simulatorUDID: String,
+        for simulatorTarget: SimulatorTarget,
         orientationOverride: SimulatorOrientation? = nil,
         logger: AxeLogger
     ) async throws -> CoordinateMapping {
         let roots = try await AccessibilityFetcher.fetchAccessibilityElements(
-            for: simulatorUDID,
+            for: simulatorTarget,
             logger: logger
         )
 
         return try await detectMapping(
             from: roots,
-            simulatorUDID: simulatorUDID,
+            simulatorTarget: simulatorTarget,
             orientationOverride: orientationOverride,
             logger: logger
         )
@@ -138,7 +138,7 @@ struct OrientationAwareCoordinates {
 
     static func detectMapping(
         from roots: [AccessibilityElement],
-        simulatorUDID: String,
+        simulatorTarget: SimulatorTarget,
         orientationOverride: SimulatorOrientation? = nil,
         logger: AxeLogger
     ) async throws -> CoordinateMapping {
@@ -157,7 +157,7 @@ struct OrientationAwareCoordinates {
         // Prefer the simulator's private UI orientation state when available; this
         // distinguishes landscape-left from landscape-right and catches upside-down portrait.
         let simulatorOrientation = await SimulatorOrientationReader.currentOrientation(
-            simulatorUDID: simulatorUDID,
+            simulatorTarget: simulatorTarget,
             logger: logger
         )
 
@@ -193,7 +193,7 @@ struct OrientationAwareCoordinates {
             "AX frame \(Int(appFrame.width))×\(Int(appFrame.height)) is landscape; probing screenshot dimensions"
         )
 
-        let screenshotDims = await screenshotPixelDimensions(for: simulatorUDID, logger: logger)
+        let screenshotDims = await screenshotPixelDimensions(for: simulatorTarget, logger: logger)
 
         if let dims = screenshotDims, dims.height > dims.width {
             // Screenshot is portrait-shaped despite a landscape AX frame →
@@ -242,7 +242,7 @@ struct OrientationAwareCoordinates {
     ///
     /// Returns `nil` if the process fails or the output is not a valid PNG.
     static func screenshotPixelDimensions(
-        for simulatorUDID: String,
+        for simulatorTarget: SimulatorTarget,
         logger: AxeLogger
     ) async -> (width: Int, height: Int)? {
         let tempURL = FileManager.default.temporaryDirectory
@@ -252,7 +252,8 @@ struct OrientationAwareCoordinates {
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
-        process.arguments = ["simctl", "io", simulatorUDID, "screenshot", "--type", "png", tempURL.path]
+        process.arguments = simulatorTarget.simctlArguments
+            + ["io", simulatorTarget.udid, "screenshot", "--type", "png", tempURL.path]
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice
 
@@ -421,7 +422,7 @@ struct OrientationAwareCoordinates {
     ///
     /// - Parameters:
     ///   - point: Logical (x, y) as supplied by the caller.
-    ///   - simulatorUDID: Target simulator UDID.
+    ///   - simulatorTarget: Target simulator.
     ///   - orientationOverride: Optional explicit rotated-device orientation. Pass
     ///     `.landscapeFlipped` when the device is rotated counter-clockwise. Leave nil for
     ///     automatic letterbox detection in portrait-hardware landscape-only apps.
@@ -429,12 +430,12 @@ struct OrientationAwareCoordinates {
     /// - Returns: Physical (x, y) ready for FBSimulatorHIDEvent.
     static func translate(
         point: (x: Double, y: Double),
-        for simulatorUDID: String,
+        for simulatorTarget: SimulatorTarget,
         orientationOverride: SimulatorOrientation? = nil,
         logger: AxeLogger
     ) async throws -> (x: Double, y: Double) {
         let mapping = try await detectMapping(
-            for: simulatorUDID,
+            for: simulatorTarget,
             orientationOverride: orientationOverride,
             logger: logger
         )
@@ -445,13 +446,13 @@ struct OrientationAwareCoordinates {
     static func translate(
         point: (x: Double, y: Double),
         roots: [AccessibilityElement],
-        for simulatorUDID: String,
+        for simulatorTarget: SimulatorTarget,
         orientationOverride: SimulatorOrientation? = nil,
         logger: AxeLogger
     ) async throws -> (x: Double, y: Double) {
         let mapping = try await detectMapping(
             from: roots,
-            simulatorUDID: simulatorUDID,
+            simulatorTarget: simulatorTarget,
             orientationOverride: orientationOverride,
             logger: logger
         )
@@ -466,18 +467,18 @@ struct OrientationAwareCoordinates {
     ///
     /// - Parameters:
     ///   - points: Logical (x, y) pairs in the current UI orientation.
-    ///   - simulatorUDID: Target simulator UDID.
+    ///   - simulatorTarget: Target simulator.
     ///   - orientationOverride: Optional explicit orientation for the rotated device case.
     ///   - logger: AXe logger instance.
     /// - Returns: Physical (x, y) pairs ready for FBSimulatorHIDEvent, in the same order as input.
     static func translateBatch(
         points: [(x: Double, y: Double)],
-        for simulatorUDID: String,
+        for simulatorTarget: SimulatorTarget,
         orientationOverride: SimulatorOrientation? = nil,
         logger: AxeLogger
     ) async throws -> [(x: Double, y: Double)] {
         let mapping = try await detectMapping(
-            for: simulatorUDID,
+            for: simulatorTarget,
             orientationOverride: orientationOverride,
             logger: logger
         )
@@ -488,13 +489,13 @@ struct OrientationAwareCoordinates {
     static func translateBatch(
         points: [(x: Double, y: Double)],
         roots: [AccessibilityElement],
-        for simulatorUDID: String,
+        for simulatorTarget: SimulatorTarget,
         orientationOverride: SimulatorOrientation? = nil,
         logger: AxeLogger
     ) async throws -> [(x: Double, y: Double)] {
         let mapping = try await detectMapping(
             from: roots,
-            simulatorUDID: simulatorUDID,
+            simulatorTarget: simulatorTarget,
             orientationOverride: orientationOverride,
             logger: logger
         )
@@ -549,12 +550,12 @@ struct OrientationAwareCoordinates {
     /// a rotated device from a letterboxed landscape-only app.
     ///
     /// - Parameters:
-    ///   - simulatorUDID: Target simulator UDID.
+    ///   - simulatorTarget: Target simulator.
     ///   - orientationOverride: When non-nil, skip detection and use this value.
     ///   - logger: AXe logger instance.
     /// - Returns: The detected (or overridden) orientation.
     static func detectOrientation(
-        for simulatorUDID: String,
+        for simulatorTarget: SimulatorTarget,
         orientationOverride: SimulatorOrientation? = nil,
         logger: AxeLogger
     ) async throws -> SimulatorOrientation {
@@ -564,7 +565,7 @@ struct OrientationAwareCoordinates {
         }
 
         let roots = try await AccessibilityFetcher.fetchAccessibilityElements(
-            for: simulatorUDID,
+            for: simulatorTarget,
             logger: logger
         )
 

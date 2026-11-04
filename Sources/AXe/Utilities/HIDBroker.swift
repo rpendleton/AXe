@@ -47,11 +47,11 @@ enum HIDBroker {
     static let startupTimeoutNanoseconds: UInt64 = 30_000_000_000
     static func sendTouchPrimitives(
         _ primitives: [HIDBrokerPrimitive],
-        simulatorUDID: String
+        simulatorTarget: SimulatorTarget
     ) throws {
-        let endpoint = try endpointPath(simulatorUDID: simulatorUDID)
+        let endpoint = try endpointPath(simulatorUDID: simulatorTarget.udid)
         try sendTouchPrimitives(primitives) {
-            try connectToReadyBroker(simulatorUDID: simulatorUDID, endpoint: endpoint)
+            try connectToReadyBroker(simulatorTarget: simulatorTarget, endpoint: endpoint)
         }
     }
 
@@ -74,8 +74,8 @@ enum HIDBroker {
     }
 
     @MainActor
-    static func serve(simulatorUDID: String, logger: AxeLogger) async throws {
-        let endpoint = try endpointPath(simulatorUDID: simulatorUDID)
+    static func serve(simulatorTarget: SimulatorTarget, logger: AxeLogger) async throws {
+        let endpoint = try endpointPath(simulatorUDID: simulatorTarget.udid)
         let listener = try makeListener(at: endpoint)
         let endpointIdentity = try socketIdentity(at: endpoint)
         defer {
@@ -83,8 +83,8 @@ enum HIDBroker {
             try? removeOwnedSocket(endpoint, matching: endpointIdentity)
         }
 
-        let bootIdentity = try currentBootIdentity(simulatorUDID: simulatorUDID)
-        let session = try await HIDInteractor.makeSession(for: simulatorUDID, logger: logger)
+        let bootIdentity = try currentBootIdentity(simulatorUDID: simulatorTarget.udid)
+        let session = try await HIDInteractor.makeSession(for: simulatorTarget, logger: logger)
         while true {
             var pollDescriptor = pollfd(fd: listener, events: Int16(POLLIN), revents: 0)
             let result = Darwin.poll(&pollDescriptor, 1, idleTimeoutMilliseconds)
@@ -109,7 +109,7 @@ enum HIDBroker {
             )
             guard shouldReuseSession(
                 sessionBootIdentity: bootIdentity,
-                currentBootIdentity: try currentBootIdentity(simulatorUDID: simulatorUDID)
+                currentBootIdentity: try currentBootIdentity(simulatorUDID: simulatorTarget.udid)
             ) else {
                 try? writeHandshake(ready: false, to: client)
                 Darwin.close(client)
@@ -237,26 +237,31 @@ enum HIDBroker {
         }
     }
 
-    private static func spawnBroker(simulatorUDID: String) throws {
+    private static func spawnBroker(simulatorTarget: SimulatorTarget) throws {
         guard let executable = Bundle.main.executableURL else {
             throw CLIError(errorDescription: "Unable to locate the AXe executable for the HID broker.")
         }
         let process = Process()
         process.executableURL = executable
-        process.arguments = ["hid-broker", "--udid", simulatorUDID]
+        process.arguments = brokerArguments(simulatorTarget)
         process.standardInput = FileHandle.nullDevice
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice
         try process.run()
     }
 
-    private static func connectToReadyBroker(simulatorUDID: String, endpoint: String) throws -> Int32 {
+    static func brokerArguments(_ simulatorTarget: SimulatorTarget) -> [String] {
+        ["hid-broker", "--udid", simulatorTarget.udid]
+            + (simulatorTarget.deviceSetPath.map { ["--device-set", $0] } ?? [])
+    }
+
+    private static func connectToReadyBroker(simulatorTarget: SimulatorTarget, endpoint: String) throws -> Int32 {
         do {
             return try connectToReadyBroker(
-                simulatorUDID: simulatorUDID,
+                simulatorUDID: simulatorTarget.udid,
                 endpoint: endpoint,
                 connector: connect(to:),
-                spawner: spawnBroker(simulatorUDID:),
+                spawner: { _ in try spawnBroker(simulatorTarget: simulatorTarget) },
                 sleeper: { _ = usleep($0) }
             )
         } catch {

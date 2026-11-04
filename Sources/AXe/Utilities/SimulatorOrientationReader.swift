@@ -4,7 +4,7 @@ import FBSimulatorControl
 @MainActor
 struct SimulatorOrientationReader {
     static func currentOrientation(
-        simulatorUDID: String,
+        simulatorTarget: SimulatorTarget,
         logger: AxeLogger
     ) async -> SimulatorOrientation? {
         do {
@@ -12,13 +12,13 @@ struct SimulatorOrientationReader {
             try frameworkLoader.loadPrivateFrameworks(logger)
 
             let simulatorSet = try await getSimulatorSet(
-                deviceSetPath: nil,
+                deviceSetPath: simulatorTarget.deviceSetPath,
                 logger: logger,
                 reporter: EmptyEventReporter.shared
             )
 
-            guard let simulator = simulatorSet.allSimulators.first(where: { $0.udid == simulatorUDID }) else {
-                logger.info().log("Orientation probe: simulator \(simulatorUDID) not found")
+            guard let simulator = simulatorSet.allSimulators.first(where: { $0.udid == simulatorTarget.udid }) else {
+                logger.info().log("Orientation probe: simulator \(simulatorTarget.udid) not found")
                 return nil
             }
 

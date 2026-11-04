@@ -6,8 +6,7 @@ struct DescribeUI: AsyncParsableCommand {
         abstract: "Describes the UI hierarchy of a booted simulator using accessibility information."
     )
 
-    @Option(name: .customLong("udid"), help: "The UDID of the simulator.")
-    var simulatorUDID: String
+    @OptionGroup var simulatorTarget: SimulatorTarget
 
     @Option(
         name: .customLong("point"),
@@ -27,7 +26,7 @@ struct DescribeUI: AsyncParsableCommand {
         try await performGlobalSetup(logger: logger)
 
         let jsonData = try await AccessibilityFetcher.fetchAccessibilityInfoJSONData(
-            for: simulatorUDID,
+            for: simulatorTarget,
             point: try parsedPoint(),
             logger: logger
         )

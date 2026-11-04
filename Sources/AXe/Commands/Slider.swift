@@ -36,8 +36,7 @@ struct Slider: AsyncParsableCommand {
     @Option(name: .customLong("poll-interval"), help: "Seconds between accessibility tree polls when --wait-timeout is active (default: 0.25).")
     var pollInterval: Double = 0.25
 
-    @Option(name: .customLong("udid"), help: "The UDID of the simulator.")
-    var simulatorUDID: String
+    @OptionGroup var simulatorTarget: SimulatorTarget
 
     func validate() throws {
         let selectorCount = [elementID != nil, elementLabel != nil].filter { $0 }.count
@@ -75,7 +74,7 @@ struct Slider: AsyncParsableCommand {
 
         let match = try await AccessibilityPoller.resolveElementWithPolling(
             query: query,
-            simulatorUDID: simulatorUDID,
+            simulatorTarget: simulatorTarget,
             waitTimeout: waitTimeout,
             pollInterval: pollInterval,
             elementType: elementType,
@@ -179,7 +178,7 @@ struct Slider: AsyncParsableCommand {
     private func performSliderDrag(_ dragPlan: SliderDragPlan, logger: AxeLogger) async throws {
         let physicalPoints = try await OrientationAwareCoordinates.translateBatch(
             points: [dragPlan.logicalStart, dragPlan.logicalEnd],
-            for: simulatorUDID,
+            for: simulatorTarget,
             logger: logger
         )
         let physicalStart = physicalPoints[0]
@@ -192,13 +191,13 @@ struct Slider: AsyncParsableCommand {
             steps: Self.directDragSteps,
             initialHold: Self.directDragInitialHold,
             finalHold: Self.directDragFinalHold,
-            for: simulatorUDID,
+            for: simulatorTarget,
             logger: logger
         )
     }
 
     private func resolveSliderElement(query: AccessibilityQuery, logger: AxeLogger) async throws -> AccessibilityMatch {
-        let roots = try await AccessibilityFetcher.fetchAccessibilityElements(for: simulatorUDID, logger: logger)
+        let roots = try await AccessibilityFetcher.fetchAccessibilityElements(for: simulatorTarget, logger: logger)
         let match = try AccessibilityTargetResolver.resolveElement(
             roots: roots,
             query: query,

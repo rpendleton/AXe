@@ -109,13 +109,13 @@ extension Tap: BatchConvertible {
             physicalPoint = try await OrientationAwareCoordinates.translate(
                 point: resolution.point,
                 roots: resolvedRoots,
-                for: context.simulatorUDID,
+                for: context.simulatorTarget,
                 logger: logger
             )
         } else {
             physicalPoint = try await OrientationAwareCoordinates.translate(
                 point: resolution.point,
-                for: context.simulatorUDID,
+                for: context.simulatorTarget,
                 logger: logger
             )
         }
@@ -139,7 +139,7 @@ extension Swipe: BatchConvertible {
         let swipeDelta = delta ?? 50.0
         let physicalPoints = try await OrientationAwareCoordinates.translateBatch(
             points: [(x: startX, y: startY), (x: endX, y: endY)],
-            for: context.simulatorUDID,
+            for: context.simulatorTarget,
             logger: logger
         )
         let physicalStart = physicalPoints[0]
@@ -182,7 +182,7 @@ extension Touch: BatchConvertible {
     func toBatchPrimitives(context: BatchContext, logger: AxeLogger) async throws -> [BatchPrimitive] {
         let physicalPoint = try await OrientationAwareCoordinates.translate(
             point: (x: pointX, y: pointY),
-            for: context.simulatorUDID,
+            for: context.simulatorTarget,
             logger: logger
         )
 

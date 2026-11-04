@@ -9,8 +9,7 @@ struct Screenshot: AsyncParsableCommand {
         abstract: "Capture a screenshot from the simulator display and save it as a PNG file"
     )
 
-    @Option(name: .customLong("udid"), help: "The UDID of the simulator.")
-    var simulatorUDID: String
+    @OptionGroup var simulatorTarget: SimulatorTarget
 
     @Option(help: "Output PNG file path. Defaults to 'Simulator Screenshot - <device name> - <timestamp>.png' in the current directory.")
     var output: String?
@@ -19,12 +18,12 @@ struct Screenshot: AsyncParsableCommand {
         let logger = AxeLogger()
         try await performGlobalSetup(logger: logger)
 
-        let trimmedUDID = simulatorUDID.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedUDID = simulatorTarget.udid.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedUDID.isEmpty else {
             throw CLIError(errorDescription: "Simulator UDID cannot be empty. Use --udid to specify a simulator.")
         }
 
-        let simulatorSet = try await getSimulatorSet(deviceSetPath: nil, logger: logger, reporter: EmptyEventReporter.shared)
+        let simulatorSet = try await getSimulatorSet(deviceSetPath: simulatorTarget.deviceSetPath, logger: logger, reporter: EmptyEventReporter.shared)
         guard let targetSimulator = simulatorSet.allSimulators.first(where: { $0.udid == trimmedUDID }) else {
             throw CLIError(errorDescription: "Simulator with UDID \(trimmedUDID) not found.")
         }

@@ -6,9 +6,12 @@ Comprehensive reference for all AXe commands. Most simulator-interaction command
 
 ```bash
 axe list-simulators
+axe list-simulators --device-set /path/to/set
 ```
 
 No `--udid` needed. Lists all available simulators with their UDIDs and boot state.
+
+`--device-set <path>` works on every simulator command, for simulators outside the default device set.
 
 ## Tap
 

@@ -23,8 +23,7 @@ struct KeySequence: AsyncParsableCommand {
     @Option(name: .customLong("delay"), help: "Delay between key presses in seconds (default: 0.1).")
     var delay: Double?
     
-    @Option(name: .customLong("udid"), help: "The UDID of the simulator.")
-    var simulatorUDID: String
+    @OptionGroup var simulatorTarget: SimulatorTarget
     
     func validate() throws {
         let parsedKeycodes = try parseCommaSeparatedIntsStrict(keycodesString, fieldName: "keycodes")
@@ -91,7 +90,7 @@ struct KeySequence: AsyncParsableCommand {
         try await HIDInteractor
             .performHIDEvent(
                 sequenceEvent,
-                for: simulatorUDID,
+                for: simulatorTarget,
                 logger: logger
             )
         

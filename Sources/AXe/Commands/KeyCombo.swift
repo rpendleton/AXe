@@ -35,8 +35,7 @@ struct KeyCombo: AsyncParsableCommand {
     @Option(name: .customLong("key"), help: "The HID keycode to press while modifiers are held (0-255).")
     var key: Int
 
-    @Option(name: .customLong("udid"), help: "The UDID of the simulator.")
-    var simulatorUDID: String
+    @OptionGroup var simulatorTarget: SimulatorTarget
 
     func validate() throws {
         let parsedModifiers = try parseCommaSeparatedIntsStrict(modifiersString, fieldName: "modifier keycodes")
@@ -92,7 +91,7 @@ struct KeyCombo: AsyncParsableCommand {
         try await HIDInteractor
             .performHIDEvent(
                 comboEvent,
-                for: simulatorUDID,
+                for: simulatorTarget,
                 logger: logger
             )
 

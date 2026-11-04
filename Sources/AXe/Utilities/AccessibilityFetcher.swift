@@ -32,19 +32,19 @@ struct AccessibilityPoint: Equatable {
 @MainActor
 struct AccessibilityFetcher {
     static func fetchAccessibilityInfoJSONData(
-        for simulatorUDID: String,
+        for simulatorTarget: SimulatorTarget,
         point: AccessibilityPoint? = nil,
         logger: AxeLogger,
         recoveryDependencies: AccessibilityRecoveryDependencies = .live
     ) async throws -> Data {
-        let simulatorSet = try await getSimulatorSet(deviceSetPath: nil, logger: logger, reporter: EmptyEventReporter.shared)
+        let simulatorSet = try await getSimulatorSet(deviceSetPath: simulatorTarget.deviceSetPath, logger: logger, reporter: EmptyEventReporter.shared)
         
-        guard let target = simulatorSet.allSimulators.first(where: { $0.udid == simulatorUDID }) else {
-            throw CLIError.simulatorNotFound(udid: simulatorUDID)
+        guard let target = simulatorSet.allSimulators.first(where: { $0.udid == simulatorTarget.udid }) else {
+            throw CLIError.simulatorNotFound(udid: simulatorTarget.udid)
         }
 
         return try await retryingAfterTestManagerRecovery(
-            simulatorUDID: simulatorUDID,
+            simulatorTarget: simulatorTarget,
             logger: logger,
             dependencies: recoveryDependencies
         ) {
@@ -121,7 +121,7 @@ struct AccessibilityFetcher {
     }
 
     static func retryingAfterTestManagerRecovery<T>(
-        simulatorUDID: String,
+        simulatorTarget: SimulatorTarget,
         logger: AxeLogger,
         dependencies: AccessibilityRecoveryDependencies,
         operation: @MainActor () async throws -> T
@@ -134,7 +134,7 @@ struct AccessibilityFetcher {
             }
             logger.info().log("Accessibility transport failed; restarting testmanagerd and retrying once")
             try await recoverTestManagerDaemon(
-                simulatorUDID: simulatorUDID,
+                simulatorTarget: simulatorTarget,
                 dependencies: dependencies
             )
             return try await operation()
@@ -172,13 +172,12 @@ struct AccessibilityFetcher {
     }
 
     static func recoverTestManagerDaemon(
-        simulatorUDID: String,
+        simulatorTarget: SimulatorTarget,
         dependencies: AccessibilityRecoveryDependencies
     ) async throws {
-        let arguments = [
-            "simctl",
+        let arguments = simulatorTarget.simctlArguments + [
             "spawn",
-            simulatorUDID,
+            simulatorTarget.udid,
             "launchctl",
             "kickstart",
             "-k",
@@ -191,7 +190,7 @@ struct AccessibilityFetcher {
         )
         guard status == 0 else {
             throw CLIError(
-                errorDescription: "AXe could not restore accessibility automation for simulator \(simulatorUDID). Restart the simulator and try again."
+                errorDescription: "AXe could not restore accessibility automation for simulator \(simulatorTarget.udid). Restart the simulator and try again."
             )
         }
         try await dependencies.wait(.milliseconds(250))
@@ -349,8 +348,8 @@ struct AccessibilityFetcher {
         }
     }
 
-    static func fetchAccessibilityElements(for simulatorUDID: String, logger: AxeLogger) async throws -> [AccessibilityElement] {
-        let jsonData = try await fetchAccessibilityInfoJSONData(for: simulatorUDID, point: nil, logger: logger)
+    static func fetchAccessibilityElements(for simulatorTarget: SimulatorTarget, logger: AxeLogger) async throws -> [AccessibilityElement] {
+        let jsonData = try await fetchAccessibilityInfoJSONData(for: simulatorTarget, point: nil, logger: logger)
         let decoder = JSONDecoder()
         
         if let roots = try? decoder.decode([AccessibilityElement].self, from: jsonData) {

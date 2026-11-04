@@ -55,6 +55,15 @@ axe type 'Hello world' --udid "$UDID"
 axe screenshot --output ./screen.png --udid "$UDID"
 ```
 
+## Device sets
+
+Commands work on the default device set. For simulators in another set, such as those created with `xcrun simctl --set <path>`, add `--device-set`:
+
+```bash
+axe list-simulators --device-set /path/to/set
+axe describe-ui --udid "$UDID" --device-set /path/to/set
+```
+
 ## Documentation
 
 Full documentation is available at [axe-cli.com/docs](https://axe-cli.com/docs).

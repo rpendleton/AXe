@@ -16,8 +16,7 @@ struct StreamVideo: AsyncParsableCommand {
         abstract: "Stream simulator frames to stdout using screenshot capture"
     )
 
-    @Option(name: .customLong("udid"), help: "The UDID of the simulator.")
-    var simulatorUDID: String
+    @OptionGroup var simulatorTarget: SimulatorTarget
 
     @Option(help: "Output format: mjpeg, raw, ffmpeg, bgra (default: mjpeg)")
     var format: OutputFormat = .mjpeg
@@ -50,12 +49,12 @@ struct StreamVideo: AsyncParsableCommand {
         try await setup(logger: logger)
         try await performGlobalSetup(logger: logger)
 
-        let trimmedUDID = simulatorUDID.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedUDID = simulatorTarget.udid.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedUDID.isEmpty else {
             throw CLIError(errorDescription: "Simulator UDID cannot be empty. Use --udid to specify a simulator.")
         }
 
-        let simulatorSet = try await getSimulatorSet(deviceSetPath: nil, logger: logger, reporter: EmptyEventReporter.shared)
+        let simulatorSet = try await getSimulatorSet(deviceSetPath: simulatorTarget.deviceSetPath, logger: logger, reporter: EmptyEventReporter.shared)
         guard let targetSimulator = simulatorSet.allSimulators.first(where: { $0.udid == trimmedUDID }) else {
             throw CLIError(errorDescription: "Simulator with UDID \(trimmedUDID) not found.")
         }

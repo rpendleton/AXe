@@ -36,8 +36,7 @@ struct Drag: AsyncParsableCommand {
     @Option(name: .customLong("post-delay"), help: "Delay after completing the drag in seconds.")
     var postDelay: Double?
 
-    @Option(name: .customLong("udid"), help: "The UDID of the simulator.")
-    var simulatorUDID: String
+    @OptionGroup var simulatorTarget: SimulatorTarget
 
     func validate() throws {
         guard startX >= 0, startY >= 0, endX >= 0, endY >= 0 else {
@@ -79,7 +78,7 @@ struct Drag: AsyncParsableCommand {
 
         let physicalPoints = try await OrientationAwareCoordinates.translateBatch(
             points: [(x: startX, y: startY), (x: endX, y: endY)],
-            for: simulatorUDID,
+            for: simulatorTarget,
             logger: logger
         )
 
@@ -90,7 +89,7 @@ struct Drag: AsyncParsableCommand {
             steps: steps,
             initialHold: Self.initialHold,
             finalHold: Self.finalHold,
-            for: simulatorUDID,
+            for: simulatorTarget,
             logger: logger
         )
 

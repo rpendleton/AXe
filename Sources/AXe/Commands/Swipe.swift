@@ -32,8 +32,7 @@ struct Swipe: AsyncParsableCommand {
     @Option(name: .customLong("post-delay"), help: "Delay after completing the swipe in seconds.")
     var postDelay: Double?
     
-    @Option(name: .customLong("udid"), help: "The UDID of the simulator.")
-    var simulatorUDID: String
+    @OptionGroup var simulatorTarget: SimulatorTarget
 
 
     func validate() throws {
@@ -90,7 +89,7 @@ struct Swipe: AsyncParsableCommand {
 
         let physicalPoints = try await OrientationAwareCoordinates.translateBatch(
             points: [(x: startX, y: startY), (x: endX, y: endY)],
-            for: simulatorUDID,
+            for: simulatorTarget,
             logger: logger
         )
         let physicalStart = physicalPoints[0]
@@ -143,7 +142,7 @@ struct Swipe: AsyncParsableCommand {
         try await HIDInteractor
             .performHIDEvent(
                 finalEvent,
-                for: simulatorUDID,
+                for: simulatorTarget,
                 logger: logger
             )
         

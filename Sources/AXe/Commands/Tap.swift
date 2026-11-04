@@ -41,8 +41,7 @@ struct Tap: AsyncParsableCommand {
     @Option(name: .customLong("poll-interval"), help: "Seconds between accessibility tree polls when --wait-timeout is active (default: 0.25).")
     var pollInterval: Double = 0.25
 
-    @Option(name: .customLong("udid"), help: "The UDID of the simulator.")
-    var simulatorUDID: String
+    @OptionGroup var simulatorTarget: SimulatorTarget
 
 
     func validate() throws {
@@ -123,7 +122,7 @@ struct Tap: AsyncParsableCommand {
             do {
                 resolution = try await AccessibilityPoller.resolveWithPolling(
                     query: query,
-                    simulatorUDID: simulatorUDID,
+                    simulatorTarget: simulatorTarget,
                     waitTimeout: waitTimeout,
                     pollInterval: pollInterval,
                     elementType: elementType,
@@ -141,7 +140,7 @@ struct Tap: AsyncParsableCommand {
 
         let physicalPoint = try await OrientationAwareCoordinates.translate(
             point: resolution.point,
-            for: simulatorUDID,
+            for: simulatorTarget,
             logger: logger
         )
 
@@ -151,7 +150,7 @@ struct Tap: AsyncParsableCommand {
                 at: physicalPoint,
                 preDelay: preDelay,
                 postDelay: postDelay,
-                for: simulatorUDID,
+                for: simulatorTarget,
                 logger: logger
             )
         case .simulator:
@@ -167,7 +166,7 @@ struct Tap: AsyncParsableCommand {
             }
 
             let finalEvent = events.count == 1 ? events[0] : FBSimulatorHIDEvent.composite(events)
-            try await HIDInteractor.performHIDEvent(finalEvent, for: simulatorUDID, logger: logger)
+            try await HIDInteractor.performHIDEvent(finalEvent, for: simulatorTarget, logger: logger)
         case .automatic:
             throw CLIError(errorDescription: "Unexpected tap style resolution.")
         }

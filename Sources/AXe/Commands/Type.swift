@@ -41,8 +41,7 @@ struct Type: AsyncParsableCommand {
     @Option(name: .customLong("file"), help: "Read text from the specified file.")
     var inputFile: String?
     
-    @Option(name: .customLong("udid"), help: "The UDID of the simulator.")
-    var simulatorUDID: String
+    @OptionGroup var simulatorTarget: SimulatorTarget
 
     func validate() throws {
         let sourceCount = [text != nil, useStdin, inputFile != nil].filter { $0 }.count
@@ -135,7 +134,7 @@ struct Type: AsyncParsableCommand {
             try await HIDInteractor
                 .performHIDEvent(
                     .composite(hidEvents),
-                    for: simulatorUDID,
+                    for: simulatorTarget,
                     logger: logger
                 )
         }
